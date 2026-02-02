@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useMenu } from "../context/MenuContext";
 
 const Dashboard = () => {
-  const { menuItems } = useMenu(); // backup lookup
+  const { menuItems } = useMenu();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("");
@@ -10,7 +10,6 @@ const Dashboard = () => {
 
   const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
-  // ✅ STABILIZED FUNCTION
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
@@ -29,7 +28,6 @@ const Dashboard = () => {
     }
   }, [API_URL, statusFilter]);
 
-  // ✅ ESLint-compliant useEffect
   useEffect(() => {
     fetchOrders();
   }, [fetchOrders]);
@@ -49,8 +47,12 @@ const Dashboard = () => {
 
   const handleDelete = async (id) => {
     if (window.confirm("Delete this order?")) {
-      await fetch(`${API_URL}/orders/${id}`, { method: "DELETE" });
-      setOrders((prev) => prev.filter((o) => o._id !== id));
+      try {
+        await fetch(`${API_URL}/orders/${id}`, { method: "DELETE" });
+        setOrders((prev) => prev.filter((o) => o._id !== id));
+      } catch (err) {
+        alert("Delete failed");
+      }
     }
   };
 
@@ -58,6 +60,7 @@ const Dashboard = () => {
     <div style={{ padding: "20px", fontFamily: "sans-serif" }}>
       <h1>Orders Dashboard</h1>
 
+      {/* Filter Section */}
       <div style={{ marginBottom: "20px" }}>
         <select
           value={statusFilter}
@@ -88,13 +91,64 @@ const Dashboard = () => {
               padding: "15px",
               marginBottom: "15px",
             }}>
-            <strong>Order: {order.orderNumber}</strong>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <strong>Order: {order.orderNumber}</strong>
+              <div>
+                {/* Fixed: Used setExpandedOrderId */}
+                <button
+                  onClick={() =>
+                    setExpandedOrderId(
+                      expandedOrderId === order._id ? null : order._id,
+                    )
+                  }>
+                  {expandedOrderId === order._id
+                    ? "Hide Details"
+                    : "View Details"}
+                </button>
+                {/* Fixed: Used handleDelete */}
+                <button
+                  onClick={() => handleDelete(order._id)}
+                  style={{ marginLeft: "10px", color: "red" }}>
+                  Delete
+                </button>
+              </div>
+            </div>
+
             <p>
               Customer: {order.customerName} | Table: {order.tableNumber}
             </p>
 
+            {/* Fixed: Used handleStatusUpdate */}
+            <div style={{ margin: "10px 0" }}>
+              <label>Status: </label>
+              <select
+                value={order.status}
+                onChange={(e) => handleStatusUpdate(order._id, e.target.value)}>
+                {[
+                  "Pending",
+                  "Preparing",
+                  "Ready",
+                  "Delivered",
+                  "Cancelled",
+                ].map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {expandedOrderId === order._id && (
-              <table width="100%">
+              <table
+                width="100%"
+                style={{ marginTop: "10px", borderTop: "1px solid #eee" }}>
+                <thead>
+                  <tr align="left">
+                    <th>Item</th>
+                    <th>Qty</th>
+                    <th>Price</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {order.items?.map((item, idx) => {
                     const itemName =

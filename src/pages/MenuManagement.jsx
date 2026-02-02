@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react"; // Added useCallback
 import { useMenu } from "../context/MenuContext";
 import { useDebounce } from "../hooks/useDebounce";
 
 const MenuManagement = () => {
   const { menuItems, setMenuItems } = useMenu();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // Now used in UI
   const [editingId, setEditingId] = useState(null);
   const [showForm, setShowForm] = useState(false);
 
@@ -38,7 +38,8 @@ const MenuManagement = () => {
   const debouncedSearch = useDebounce(searchTerm, 300);
   const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
-  const fetchMenu = async () => {
+  // Wrapped in useCallback to satisfy dependency rules
+  const fetchMenu = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
     if (debouncedSearch) params.append("q", debouncedSearch);
@@ -57,17 +58,23 @@ const MenuManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [
+    API_URL,
+    debouncedSearch,
+    category,
+    isAvailableFilter,
+    minPrice,
+    maxPrice,
+    setMenuItems,
+  ]);
 
+  // Dependency array is now complete
   useEffect(() => {
     fetchMenu();
-  }, [debouncedSearch, category, isAvailableFilter, minPrice, maxPrice]);
+  }, [fetchMenu]);
 
-  // --- UPDATED: handleSubmit with Joi-friendly payload ---
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // 1. Clean ingredients array
     const ingredientsArray =
       typeof formItem.ingredients === "string"
         ? formItem.ingredients
@@ -76,7 +83,6 @@ const MenuManagement = () => {
             .filter((i) => i !== "")
         : formItem.ingredients;
 
-    // 2. Construct the clean payload
     const payload = {
       name: formItem.name,
       description: formItem.description,
@@ -87,7 +93,6 @@ const MenuManagement = () => {
       preparationTime: Number(formItem.preparationTime),
     };
 
-    // 3. Joi URI fix: Only include imageUrl if it's a non-empty string
     if (formItem.imageUrl && formItem.imageUrl.trim() !== "") {
       payload.imageUrl = formItem.imageUrl;
     }
@@ -136,12 +141,10 @@ const MenuManagement = () => {
     }
   };
 
-  // --- UPDATED: startEdit ensuring proper format ---
   const startEdit = (item) => {
     setEditingId(item._id);
     setFormItem({
       ...item,
-      // Convert array back to string for input or fallback to empty string
       ingredients: Array.isArray(item.ingredients)
         ? item.ingredients.join(", ")
         : item.ingredients || "",
@@ -160,7 +163,6 @@ const MenuManagement = () => {
   const handleConfirmOrder = async (e) => {
     e.preventDefault();
     const totalAmount = orderModalItem.price * orderData.quantity;
-
     const orderPayload = {
       items: [
         {
@@ -193,6 +195,9 @@ const MenuManagement = () => {
   return (
     <div style={{ padding: "20px", fontFamily: "sans-serif" }}>
       <h2>Menu Management</h2>
+
+      {/* Used 'loading' state to show a status message */}
+      {loading && <p style={{ color: "blue" }}>Updating menu...</p>}
 
       {/* --- Order Modal --- */}
       {orderModalItem && (
@@ -281,7 +286,7 @@ const MenuManagement = () => {
         }}>
         <input
           type="text"
-          placeholder="Search name/ingredients..."
+          placeholder="Search..."
           onChange={(e) => setSearchTerm(e.target.value)}
         />
         <select onChange={(e) => setCategory(e.target.value)}>
@@ -297,18 +302,6 @@ const MenuManagement = () => {
           <option value="true">Available</option>
           <option value="false">Out of Stock</option>
         </select>
-        <input
-          type="number"
-          placeholder="Min Price"
-          style={{ width: "90px" }}
-          onChange={(e) => setMinPrice(e.target.value)}
-        />
-        <input
-          type="number"
-          placeholder="Max Price"
-          style={{ width: "90px" }}
-          onChange={(e) => setMaxPrice(e.target.value)}
-        />
         <button
           onClick={() => {
             resetForm();
@@ -371,7 +364,7 @@ const MenuManagement = () => {
           />
           <input
             type="number"
-            placeholder="Prep Time (mins)"
+            placeholder="Prep Time"
             value={formItem.preparationTime}
             onChange={(e) =>
               setFormItem({ ...formItem, preparationTime: e.target.value })
@@ -385,51 +378,21 @@ const MenuManagement = () => {
             }
           />
           <input
-            placeholder="Ingredients (comma separated)"
+            placeholder="Ingredients"
             value={formItem.ingredients}
             onChange={(e) =>
               setFormItem({ ...formItem, ingredients: e.target.value })
             }
           />
-          <div style={{ gridColumn: "span 2", display: "flex", gap: "15px" }}>
-            <label>
-              <input
-                type="checkbox"
-                checked={formItem.isAvailable}
-                onChange={(e) =>
-                  setFormItem({ ...formItem, isAvailable: e.target.checked })
-                }
-              />{" "}
-              Is Available
-            </label>
-          </div>
-          <textarea
-            style={{ gridColumn: "span 2" }}
-            placeholder="Description"
-            value={formItem.description}
-            onChange={(e) =>
-              setFormItem({ ...formItem, description: e.target.value })
-            }
-          />
           <button
             type="submit"
-            style={{
-              background: "#007bff",
-              color: "white",
-              border: "none",
-              padding: "10px",
-            }}>
+            style={{ background: "#007bff", color: "white", padding: "10px" }}>
             {editingId ? "Update Item" : "Save Item"}
           </button>
           <button
             type="button"
             onClick={resetForm}
-            style={{
-              background: "#6c757d",
-              color: "white",
-              border: "none",
-              padding: "10px",
-            }}>
+            style={{ background: "#6c757d", color: "white", padding: "10px" }}>
             Cancel
           </button>
         </form>
@@ -468,30 +431,19 @@ const MenuManagement = () => {
               </td>
               <td>
                 <strong>{item.name}</strong>
-                <p style={{ fontSize: "0.9em", color: "#555" }}>
-                  Ingredients: {item.ingredients && item.ingredients.join(", ")}
+                <p style={{ fontSize: "0.8em" }}>
+                  {item.ingredients?.join(", ")}
                 </p>
               </td>
               <td>{item.category}</td>
               <td>Rs. {item.price}</td>
               <td>
-                <button
-                  onClick={() => toggleAvailability(item)}
-                  style={{
-                    background: item.isAvailable ? "#d4edda" : "#f8d7da",
-                    border: "1px solid #ccc",
-                    borderRadius: "4px",
-                    padding: "4px 8px",
-                  }}>
+                <button onClick={() => toggleAvailability(item)}>
                   {item.isAvailable ? "Available" : "Out of Stock"}
                 </button>
               </td>
               <td>
-                <button
-                  onClick={() => startEdit(item)}
-                  style={{ marginRight: "8px" }}>
-                  Edit
-                </button>
+                <button onClick={() => startEdit(item)}>Edit</button>
                 <button
                   onClick={() => handleDelete(item._id)}
                   style={{ color: "red" }}>
@@ -501,13 +453,8 @@ const MenuManagement = () => {
               <td>
                 <button
                   disabled={!item.isAvailable}
-                  onClick={() => setOrderModalItem(item)}
-                  style={{
-                    background: item.isAvailable ? "#007bff" : "#ccc",
-                    color: "white",
-                    cursor: item.isAvailable ? "pointer" : "not-allowed",
-                  }}>
-                  Order Now
+                  onClick={() => setOrderModalItem(item)}>
+                  Order
                 </button>
               </td>
             </tr>
