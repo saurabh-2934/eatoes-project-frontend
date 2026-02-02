@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from "react"; // Added useCallback
+import React, { useState, useEffect, useCallback } from "react";
 import { useMenu } from "../context/MenuContext";
 import { useDebounce } from "../hooks/useDebounce";
 
 const MenuManagement = () => {
   const { menuItems, setMenuItems } = useMenu();
-  const [loading, setLoading] = useState(false); // Now used in UI
+  const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [showForm, setShowForm] = useState(false);
 
@@ -68,7 +68,6 @@ const MenuManagement = () => {
     setMenuItems,
   ]);
 
-  // Dependency array is now complete
   useEffect(() => {
     fetchMenu();
   }, [fetchMenu]);
@@ -196,7 +195,6 @@ const MenuManagement = () => {
     <div style={{ padding: "20px", fontFamily: "sans-serif" }}>
       <h2>Menu Management</h2>
 
-      {/* Used 'loading' state to show a status message */}
       {loading && <p style={{ color: "blue" }}>Updating menu...</p>}
 
       {/* --- Order Modal --- */}
@@ -302,6 +300,23 @@ const MenuManagement = () => {
           <option value="true">Available</option>
           <option value="false">Out of Stock</option>
         </select>
+
+        {/* CORRECTED: Added setMinPrice and setMaxPrice here */}
+        <input
+          type="number"
+          placeholder="Min Price"
+          value={minPrice}
+          style={{ width: "90px" }}
+          onChange={(e) => setMinPrice(e.target.value)}
+        />
+        <input
+          type="number"
+          placeholder="Max Price"
+          value={maxPrice}
+          style={{ width: "90px" }}
+          onChange={(e) => setMaxPrice(e.target.value)}
+        />
+
         <button
           onClick={() => {
             resetForm();
