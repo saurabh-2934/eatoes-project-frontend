@@ -38,7 +38,6 @@ const MenuManagement = () => {
   const debouncedSearch = useDebounce(searchTerm, 300);
   const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
-  // Wrapped in useCallback to satisfy dependency rules
   const fetchMenu = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
@@ -148,6 +147,7 @@ const MenuManagement = () => {
         ? item.ingredients.join(", ")
         : item.ingredients || "",
       imageUrl: item.imageUrl || "",
+      description: item.description || "",
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -301,19 +301,18 @@ const MenuManagement = () => {
           <option value="false">Out of Stock</option>
         </select>
 
-        {/* CORRECTED: Added setMinPrice and setMaxPrice here */}
         <input
           type="number"
           placeholder="Min Price"
-          value={minPrice}
           style={{ width: "90px" }}
+          value={minPrice}
           onChange={(e) => setMinPrice(e.target.value)}
         />
         <input
           type="number"
           placeholder="Max Price"
-          value={maxPrice}
           style={{ width: "90px" }}
+          value={maxPrice}
           onChange={(e) => setMaxPrice(e.target.value)}
         />
 
@@ -393,10 +392,19 @@ const MenuManagement = () => {
             }
           />
           <input
-            placeholder="Ingredients"
+            placeholder="Ingredients (comma separated)"
             value={formItem.ingredients}
             onChange={(e) =>
               setFormItem({ ...formItem, ingredients: e.target.value })
+            }
+          />
+          {/* DESCRIPTION FIELD ADDED HERE */}
+          <textarea
+            placeholder="Description"
+            style={{ gridColumn: "span 2", padding: "10px", height: "60px" }}
+            value={formItem.description}
+            onChange={(e) =>
+              setFormItem({ ...formItem, description: e.target.value })
             }
           />
           <button
@@ -421,7 +429,7 @@ const MenuManagement = () => {
         <thead style={{ background: "#343a40", color: "white" }}>
           <tr>
             <th>Image</th>
-            <th>Name</th>
+            <th>Item Details</th>
             <th>Category</th>
             <th>Price</th>
             <th>Status</th>
@@ -446,8 +454,17 @@ const MenuManagement = () => {
               </td>
               <td>
                 <strong>{item.name}</strong>
-                <p style={{ fontSize: "0.8em" }}>
-                  {item.ingredients?.join(", ")}
+                {/* DESCRIPTION DISPLAYED HERE */}
+                <p
+                  style={{
+                    fontSize: "0.85em",
+                    margin: "4px 0",
+                    color: "#666",
+                  }}>
+                  {item.description}
+                </p>
+                <p style={{ fontSize: "0.75em", color: "#888" }}>
+                  <em>Ingredients: {item.ingredients?.join(", ")}</em>
                 </p>
               </td>
               <td>{item.category}</td>
